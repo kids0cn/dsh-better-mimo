@@ -1,24 +1,33 @@
 # dsh-better-mimo —— llm-mimo 段（合并进 profile 的 cordis.patch.yml）
+#
+# 背景：DSH 的模型设置界面（GUI）只支持 OpenAI v1 地址，没有协议开关。
+#       本段的作用 = 打开插件里被隐藏的 anthropic 接入点 + 接入协议。
+#
+# 必改只有三行：apiFormat / baseURL / thinking。
+# ★ 你已经配置好的模型信息（GUI 模型目录）不需要改，原样生效。
+#
 # 预飞：dsh --profile web --dump-config | grep -A8 'id: llm-mimo'
-# 重启后生效：kill -9 $(systemctl show dsh-web.service -p MainPID --value)
-# （systemd Restart=on-failure + RestartSec=3 会自动拉起；延迟触发避免切断自己回复）
+# 重启生效：kill -9 $(systemctl show dsh-web.service -p MainPID --value)
+# （systemd Restart=on-failure + RestartSec=3 自动拉起；须延迟触发避免切断自己回复）
 - id: llm-mimo
   name: "@mimo-codex/dsh-llm-mimo"
   config:
     apiKeyEnv: XIAOMI_TOKEN_PLAN_CN_API_KEY
-    # 换到 Anthropic 协议面（Claude Code 同路）：
-    # - chat 面 tool 角色丢图（上游 issue #1），anthropic 面 tool_result 生来带图
-    # - chat 面长历史+任意图网关静默挂死；anthropic 面真 body 595 条+图 = 36s 完整流
+    # ① 启用隐藏的 anthropic 协议：chat 面 tool 角色丢图（上游 issue #1），
+    #    anthropic 面 tool_result 生来带图；且 chat 面长历史+任意图网关静默挂死，
+    #    anthropic 面真 body 595 条+图 = 36s 完整流。
     apiFormat: anthropic
+    # ② 切到隐藏的 anthropic 接入点（与 chat 的 /v1 并列存在于网关）。
     baseURL: https://token-plan-cn.xiaomimimo.com/anthropic
-    # 官方默认 thinking 开启（大上下文实测 62.7s vs 关 25.3s，且开思考时工具历史
-    # 必须完整回传 reasoning_content 否则 400）。日常建议 disabled；要官方默认推理就 enabled。
+    # ③ 思考开关：官方默认 enabled（大上下文实测 62.7s vs 关 25.3s，且开思考时工具历史
+    #    必须完整回传 reasoning_content 否则 400）。日常建议 disabled；要官方默认推理就 enabled。
     thinking: disabled
-    # anthropic 面静默吞 audio/video → 模态收紧，让 DSH 显式报错而非丢数据。
-    # 音视频走 OpenAI 面：见 skills/mimo-media。
-    modelsJson: '[{"id":"mimo-v2.6-flash","name":"MiMo V2.6
-      Flash","inputModalities":["text","image"]},{"id":"mimo-v2.6-pro","name":"MiMo
-      V2.6
-      Pro","inputModalities":["text","image"]},{"id":"mimo-v2.5","name":"MiMo
-      V2.5","inputModalities":["text","image"]},{"id":"mimo-v2.5-pro","name":"MiMo
-      V2.5 Pro","inputModalities":["text"]}]'
+    # ④ 【可选·不需要可整段删掉】收紧模态：anthropic 面静默吞 audio/video，收紧后 DSH 显式报错。
+    #    注意：GUI 模型页维护过的目录在运行时优先（.volatile()），文件层这份可能被盖掉——
+    #    音视频统一建议走 OpenAI 面的 skills/mimo-media。
+    # modelsJson: '[{"id":"mimo-v2.6-flash","name":"MiMo V2.6
+    #   Flash","inputModalities":["text","image"]},{"id":"mimo-v2.6-pro","name":"MiMo
+    #   V2.6
+    #   Pro","inputModalities":["text","image"]},{"id":"mimo-v2.5","name":"MiMo
+    #   V2.5","inputModalities":["text","image"]},{"id":"mimo-v2.5-pro","name":"MiMo
+    #   V2.5 Pro","inputModalities":["text"]}]'

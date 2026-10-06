@@ -8,6 +8,24 @@ Anthropic Messages。默认的 chat 面在「工具读图」和「长会话 + �
 
 ---
 
+## ⚠️ 先说清楚：模型设置界面只支持 OpenAI v1 地址
+
+DSH 的**模型设置页（GUI）只能填 OpenAI 风格的 `/v1` 地址**，没有协议切换开关——所以你在界面上
+无论怎么改，都只会走到 chat 面那条坏路径。
+
+**本方案做的事，就是把插件里被隐藏的 anthropic 接入点和接入协议打开**：
+
+| | |
+|---|---|
+| 协议开关 | `apiFormat: anthropic`（上游内置能力，GUI 不暴露，**这才是「补丁」的全部**） |
+| 接入点 | `baseURL: .../anthropic`（网关的 anthropic 端点，与 chat 的 `/v1` 并列存在） |
+| **不需要动的** | **你已经配置好的模型信息**——GUI 里维护的模型目录原样生效，不用重配、不用改模型条目 |
+
+> 模型目录（`modelsJson`）是 `.volatile()` 字段：**GUI 模型页里维护的目录在运行时优先生效**，
+> 文件层的同名配置可能被它盖掉。所以「不改模型信息」不只是省事，也符合 DSH 的实际取值顺序。
+
+---
+
 ## 30 秒接入
 
 前置：DSH 已装 `@mimo-codex/dsh-llm-mimo`（**上游原版即可，不需要任何 pnpm patch**），凭据
@@ -15,6 +33,8 @@ Anthropic Messages。默认的 chat 面在「工具读图」和「长会话 + �
 
 1. 把 [config/cordis.patch.yml.snippet](config/cordis.patch.yml.snippet) 的 `llm-mimo` 段
    合并进你的 profile `~/.dsh/profiles/<你的profile>/cordis.patch.yml`
+   —— **必改只有三行：`apiFormat` / `baseURL` / `thinking`。你已配置好的模型信息不用改**
+   （GUI 模型目录原样生效；snippet 里的 `modelsJson` 是可选增强，不需要就整段删掉）
 2. 预飞 + 重启：
 
    ```bash
@@ -93,14 +113,25 @@ DSH 这类重度 agent 会话随时可能裁剪/压缩历史，撞上就是全�
 
 ## 最终配置
 
-见 [config/cordis.patch.yml.snippet](config/cordis.patch.yml.snippet)，四行是关键：
+见 [config/cordis.patch.yml.snippet](config/cordis.patch.yml.snippet)。**必改三行**：
 
 ```yaml
-apiFormat: anthropic      # 换面：解决坑1、坑2
-baseURL: https://token-plan-cn.xiaomimimo.com/anthropic
+apiFormat: anthropic      # 启用隐藏的 anthropic 协议（解决坑1、坑2）
+baseURL: https://token-plan-cn.xiaomimimo.com/anthropic   # 切到隐藏的 anthropic 接入点
 thinking: disabled        # 解决坑3（要官方默认开思考就改成 enabled）
-modelsJson: '...inputModalities:["text","image"]...'   # 音视频显式拦截（坑4）
 ```
+
+**不需要改的：你已配置好的模型信息**（GUI 模型目录原样生效）。
+
+可选第四行——只有当你的模型目录把音视频也勾了、且你希望 DSH 在 anthropic 面**显式报错**
+而不是静默丢数据时，才需要在文件层收紧模态：
+
+```yaml
+modelsJson: '...inputModalities:["text","image"]...'   # 【可选】音视频显式拦截（坑4）
+```
+
+> 若 GUI 模型页维护过目录，运行时以 GUI 为准（`.volatile()` 优先），文件层这份会被盖掉——
+> 这时音视频请直接走 OpenAI 面的 `mimo-media` skill，不要指望模态拦截。
 
 ---
 
