@@ -1,0 +1,24 @@
+# dsh-better-mimo —— llm-mimo 段（合并进 profile 的 cordis.patch.yml）
+# 预飞：dsh --profile web --dump-config | grep -A8 'id: llm-mimo'
+# 重启后生效：kill -9 $(systemctl show dsh-web.service -p MainPID --value)
+# （systemd Restart=on-failure + RestartSec=3 会自动拉起；延迟触发避免切断自己回复）
+- id: llm-mimo
+  name: "@mimo-codex/dsh-llm-mimo"
+  config:
+    apiKeyEnv: XIAOMI_TOKEN_PLAN_CN_API_KEY
+    # 换到 Anthropic 协议面（Claude Code 同路）：
+    # - chat 面 tool 角色丢图（上游 issue #1），anthropic 面 tool_result 生来带图
+    # - chat 面长历史+任意图网关静默挂死；anthropic 面真 body 595 条+图 = 36s 完整流
+    apiFormat: anthropic
+    baseURL: https://token-plan-cn.xiaomimimo.com/anthropic
+    # 官方默认 thinking 开启（大上下文实测 62.7s vs 关 25.3s，且开思考时工具历史
+    # 必须完整回传 reasoning_content 否则 400）。日常建议 disabled；要官方默认推理就 enabled。
+    thinking: disabled
+    # anthropic 面静默吞 audio/video → 模态收紧，让 DSH 显式报错而非丢数据。
+    # 音视频走 OpenAI 面：见 skills/mimo-media。
+    modelsJson: '[{"id":"mimo-v2.6-flash","name":"MiMo V2.6
+      Flash","inputModalities":["text","image"]},{"id":"mimo-v2.6-pro","name":"MiMo
+      V2.6
+      Pro","inputModalities":["text","image"]},{"id":"mimo-v2.5","name":"MiMo
+      V2.5","inputModalities":["text","image"]},{"id":"mimo-v2.5-pro","name":"MiMo
+      V2.5 Pro","inputModalities":["text"]}]'

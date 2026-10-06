@@ -1,0 +1,6 @@
+# 本机痕迹 / 密钥
+*.key
+.env
+node_modules/
+__pycache__/
+.DS_Store
